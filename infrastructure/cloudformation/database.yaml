@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'DynamoDB Table for Serverless Application'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - test
+      - prod
+    Description: Environment name
+
+  TableName:
+    Type: String
+    Default: Items
+    Description: Name of the DynamoDB table
+
+Resources:
+  ItemsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${EnvironmentName}-${TableName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  # CloudWatch Alarms for DynamoDB
+  ReadThrottleEventsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-${TableName}-ReadThrottleEvents
+      AlarmDescription: Alarm for DynamoDB read throttle events
+      MetricName: ReadThrottleEvents
+      Namespace: AWS/DynamoDB
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: TableName
+          Value: !Ref ItemsTable
+      TreatMissingData: notBreaching
+
+  WriteThrottleEventsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${EnvironmentName}-${TableName}-WriteThrottleEvents
+      AlarmDescription: Alarm for DynamoDB write throttle events
+      MetricName: WriteThrottleEvents
+      Namespace: AWS/DynamoDB
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: TableName
+          Value: !Ref ItemsTable
+      TreatMissingData: notBreaching
+
+Outputs:
+  TableName:
+    Description: Name of the DynamoDB table
+    Value: !Ref ItemsTable
+    Export:
+      Name: !Sub ${EnvironmentName}-${TableName}-Name
+
+  TableArn:
+    Description: ARN of the DynamoDB table
+    Value: !GetAtt ItemsTable.Arn
+    Export:
+      Name: !Sub ${EnvironmentName}-${TableName}-Arn
+

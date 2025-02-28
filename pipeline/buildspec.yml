@@ -1,0 +1,35 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 18
+    commands:
+      - echo Installing dependencies...
+      - npm install -g aws-sam-cli
+      - cd frontend && npm install
+      - cd ../backend && npm install
+      
+  build:
+    commands:
+      - echo Building the frontend...
+      - cd ../frontend
+      - npm run build
+      
+      - echo Packaging the backend...
+      - cd ../backend
+      - sam package --template-file template.yaml --s3-bucket ${ARTIFACT_BUCKET} --output-template-file packaged.yaml
+      
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      
+artifacts:
+  files:
+    - backend/packaged.yaml
+    - frontend/build/**/*
+    - appspec.yml
+    - scripts/**/*
+  base-directory: '.'
+  discard-paths: no
+
